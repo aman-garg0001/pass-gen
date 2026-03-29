@@ -25,5 +25,6 @@ Thumbs.db
 .vscode/
 
 # Zone.Identifier (Windows metadata)
-*.Zone.Identifier
+*Zone.Identifier
+public/*Zone.Identifier
 keys.json
