@@ -1,0 +1,29 @@
+node_modules/
+
+# SQLite database files
+passgen.db
+passgen.db-shm
+passgen.db-wal
+*.db
+*.db-shm
+*.db-wal
+
+data/
+
+# Logs
+logs/
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+
+# VS Code settings
+.vscode/
+
+# Zone.Identifier (Windows metadata)
+*.Zone.Identifier
+keys.json

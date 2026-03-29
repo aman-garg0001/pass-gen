@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PassGen</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>">
+  <link rel="manifest" href="/manifest.json">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f172a; color: #e2e8f0;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    .container {
+      background: #1e293b; border-radius: 12px; padding: 2rem;
+      width: 100%; max-width: 520px; box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+    }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; }
+    h1 { font-size: 1.5rem; color: #f8fafc; }
+    .header-actions { display: flex; gap: 0.4rem; }
+    .icon-btn {
+      background: #334155; border: none; color: #94a3b8; border-radius: 6px;
+      padding: 0.35rem 0.5rem; cursor: pointer; font-size: 0.8rem; transition: all 0.2s;
+    }
+    .icon-btn:hover { background: #475569; color: #e2e8f0; }
+    .subtitle { font-size: 0.85rem; color: #94a3b8; margin-bottom: 1.5rem; }
+    label { display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem; }
+    input, select {
+      width: 100%; padding: 0.65rem 0.75rem; border: 1px solid #334155;
+      border-radius: 8px; background: #0f172a; color: #e2e8f0;
+      font-size: 0.95rem; margin-bottom: 1rem; outline: none; transition: border-color 0.2s;
+    }
+    input:focus, select:focus { border-color: #6366f1; }
+    input.invalid { border-color: #dc2626; }
+    input.valid { border-color: #22c55e; }
+    .field-hint { font-size: 0.75rem; margin-bottom: 0.75rem; min-height: 1.1rem; line-height: 1.1rem; display: block; }
+    .hint-error { color: #f87171; }
+    .hint-ok { color: #4ade80; }
+    .pw-field { position: relative; margin-bottom: 0.5rem; }
+    .pw-field input { margin-bottom: 0; padding-right: 2.5rem; }
+    .pw-toggle {
+      position: absolute; right: 0.6rem; top: 0.55rem; background: none; border: none;
+      color: #64748b; cursor: pointer; font-size: 1rem; padding: 0.15rem;
+    }
+    .pw-toggle:hover { color: #e2e8f0; }
+    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .tab {
+      flex: 1; padding: 0.6rem; border: 1px solid #334155; border-radius: 8px;
+      background: transparent; color: #94a3b8; font-size: 0.9rem;
+      cursor: pointer; text-align: center; transition: all 0.2s;
+    }
+    .tab.active { background: #6366f1; color: #fff; border-color: #6366f1; }
+    .tab:hover:not(.active) { border-color: #6366f1; color: #e2e8f0; }
+    .row { display: flex; gap: 0.75rem; }
+    .row > div { flex: 1; }
+    .primary {
+      width: 100%; padding: 0.7rem; border: none; border-radius: 8px;
+      background: #6366f1; color: #fff; font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .primary:hover { background: #4f46e5; }
+    .primary:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+    .btn-warn { background: #d97706; }
+    .btn-warn:hover { background: #b45309; }
+    .btn-danger { background: #dc2626; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-sm { padding: 0.45rem 0.6rem; font-size: 0.8rem; }
+    .hidden { display: none !important; }
+    .no-keys { font-size: 0.85rem; color: #94a3b8; padding: 0.5rem 0; margin-bottom: 1rem; }
+    .key-info {
+      background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+      padding: 0.6rem 0.75rem; margin-bottom: 1rem; font-size: 0.8rem; color: #94a3b8;
+    }
+    .result { margin-top: 1.25rem; display: none; }
+    .result-header { display: flex; align-items: center; gap: 0.5rem; }
+    .result-label { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.35rem; }
+    .timer { font-size: 0.75rem; color: #f59e0b; }
+    .strength-bar { height: 4px; background: #334155; border-radius: 2px; margin-bottom: 0.3rem; overflow: hidden; }
+    .strength-fill { height: 100%; border-radius: 2px; transition: width 0.3s, background 0.3s; width: 0; }
+    .strength-text { font-size: 0.75rem; margin-bottom: 0.5rem; }
+    .result-box {
+      display: flex; align-items: center; background: #0f172a;
+      border: 1px solid #334155; border-radius: 8px; padding: 0.65rem 0.75rem; gap: 0.5rem;
+    }
+    .result-box code {
+      flex: 1; font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.95rem; word-break: break-all; color: #a5f3fc;
+    }
+    .copy-btn {
+      padding: 0.4rem 0.6rem; font-size: 0.75rem; background: #334155;
+      border: none; border-radius: 6px; color: #e2e8f0; cursor: pointer; white-space: nowrap;
+    }
+    .copy-btn:hover { background: #475569; }
+    .copied { background: #22c55e !important; }
+    .toast {
+      position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+      background: #334155; color: #e2e8f0; padding: 0.6rem 1.2rem; border-radius: 8px;
+      font-size: 0.85rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 100;
+    }
+    .toast.show { opacity: 1; }
+    .confirm-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex;
+      align-items: center; justify-content: center; z-index: 50;
+    }
+    .confirm-box {
+      background: #1e293b; border-radius: 12px; padding: 1.5rem; max-width: 400px; width: 90%;
+    }
+    .confirm-box p { margin-bottom: 1rem; font-size: 0.95rem; }
+    .confirm-actions { display: flex; gap: 0.5rem; }
+    .confirm-actions button { flex: 1; }
+    .history-list { max-height: 200px; overflow-y: auto; margin-top: 0.5rem; }
+    .history-item {
+      padding: 0.4rem 0; border-bottom: 1px solid #1e293b; font-size: 0.8rem; color: #94a3b8;
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-action { color: #a5f3fc; font-weight: 600; text-transform: capitalize; }
+    .history-time { color: #64748b; font-size: 0.7rem; }
+    /* Lock screen */
+    .lock-screen { text-align: center; }
+    .lock-screen h2 { font-size: 1.2rem; margin-bottom: 0.5rem; color: #f8fafc; }
+    .lock-screen p { font-size: 0.85rem; color: #94a3b8; margin-bottom: 1.5rem; }
+    /* Duplicate modal extras */
+    .dup-settings { text-align: left; margin: 1rem 0; }
+    .dup-settings label { margin-bottom: 0.25rem; }
+    .dup-settings select { margin-bottom: 0.75rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Lock Screen -->
+    <div id="lock-screen" class="lock-screen">
+      <h1 style="margin-bottom:0.5rem">🔐 PassGen</h1>
+      <p id="lock-msg">Enter your master password to unlock</p>
+      <div class="pw-field" style="margin-bottom:1rem">
+        <input type="password" id="master-pw" placeholder="Master password">
+        <button class="pw-toggle" data-target="master-pw" type="button" aria-label="Toggle visibility">👁</button>
+      </div>
+      <div id="master-confirm-wrap" class="hidden">
+        <div class="pw-field" style="margin-bottom:1rem">
+          <input type="password" id="master-pw-confirm" placeholder="Confirm master password">
+          <button class="pw-toggle" data-target="master-pw-confirm" type="button" aria-label="Toggle visibility">👁</button>
+        </div>
+      </div>
+      <button class="primary" id="unlock-btn">Unlock</button>
+    </div>
+
+    <!-- Main App (hidden until unlocked) -->
+    <div id="main-app" class="hidden">
+      <div class="header">
+        <h1>🔐 PassGen</h1>
+        <div class="header-actions">
+          <button class="icon-btn" id="exportBtn" title="Export keys (Ctrl+E)">📤</button>
+          <button class="icon-btn" id="importBtn" title="Import keys">📥</button>
+          <input type="file" id="importFile" accept=".json" style="display:none">
+          <button class="icon-btn" id="lockBtn" title="Lock">🔒</button>
+        </div>
+      </div>
+      <p class="subtitle">Derive unique passwords from your base password + app key</p>
+
+      <div class="tabs" role="tablist">
+        <div class="tab active" data-tab="generate" role="tab" tabindex="0">Generate</div>
+        <div class="tab" data-tab="retrieve" role="tab" tabindex="0">Retrieve</div>
+      </div>
+
+      <!-- Generate Panel -->
+      <div id="generate-panel" role="tabpanel">
+        <label for="gen-appKey">App Key</label>
+        <input type="text" id="gen-appKey" placeholder="e.g. instagram, facebook, gmail">
+
+        <label for="gen-category">Category (optional)</label>
+        <input type="text" id="gen-category" placeholder="e.g. social, work, finance">
+
+        <label for="gen-base">Base Password</label>
+        <div class="pw-field">
+          <input type="password" id="gen-base" placeholder="Your secret base password">
+          <button class="pw-toggle" data-target="gen-base" type="button" aria-label="Toggle visibility">👁</button>
+        </div>
+        <div class="field-hint" id="gen-base-hint"></div>
+
+        <label for="gen-base-confirm">Confirm Base Password</label>
+        <div class="pw-field">
+          <input type="password" id="gen-base-confirm" placeholder="Re-enter base password">
+          <button class="pw-toggle" data-target="gen-base-confirm" type="button" aria-label="Toggle visibility">👁</button>
+        </div>
+        <div class="field-hint" id="gen-confirm-hint"></div>
+
+        <div class="row">
+          <div>
+            <label for="gen-length">Length</label>
+            <select id="gen-length">
+              <option value="16">16</option>
+              <option value="20" selected>20</option>
+              <option value="24">24</option>
+              <option value="32">32</option>
+            </select>
+          </div>
+          <div>
+            <label for="gen-symbols">Symbols</label>
+            <select id="gen-symbols">
+              <option value="yes" selected>Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="primary" id="gen-btn" disabled>Generate Password (Ctrl+G)</button>
+      </div>
+
+      <!-- Retrieve Panel -->
+      <div id="retrieve-panel" class="hidden" role="tabpanel">
+        <label for="ret-search">Search Keys</label>
+        <input type="text" id="ret-search" placeholder="Filter by name or category...">
+
+        <div id="key-list-wrap">
+          <label for="ret-appKey">Select App Key</label>
+          <select id="ret-appKey"></select>
+        </div>
+        <div class="no-keys hidden" id="no-keys-msg">No app keys found. Generate one first.</div>
+
+        <div id="key-info" class="key-info hidden"></div>
+
+        <label for="ret-base">Base Password</label>
+        <div class="pw-field">
+          <input type="password" id="ret-base" placeholder="Your secret base password">
+          <button class="pw-toggle" data-target="ret-base" type="button" aria-label="Toggle visibility">👁</button>
+        </div>
+        <div class="field-hint"></div>
+
+        <button class="primary" id="ret-btn" style="margin-bottom:0.5rem">Retrieve Password (Ctrl+R)</button>
+        <div class="row">
+          <div><button class="primary btn-warn btn-sm" id="rotate-btn">🔄 Rotate</button></div>
+          <div><button class="primary btn-sm" id="history-btn" style="background:#334155">📜 History</button></div>
+          <div><button class="primary btn-danger btn-sm" id="delete-btn">🗑 Delete</button></div>
+        </div>
+      </div>
+
+      <div class="result" id="result">
+        <div class="result-header">
+          <p class="result-label">Your Password <span id="auto-clear-timer" class="timer"></span></p>
+        </div>
+        <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+        <p class="strength-text" id="strength-text"></p>
+        <div class="result-box">
+          <code id="output"></code>
+          <button class="copy-btn" id="copyBtn" title="Copy">📋 Copy</button>
+          <button class="copy-btn" id="copyClearBtn" title="Copy & hide">📋🔒</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    let allKeys = {};
+    let clearTimer = null;
+    let isFirstTime = false;
+
+    // --- Toast ---
+    function toast(msg) {
+      const t = $('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    // --- Password strength ---
+    function showStrength(pw) {
+      let score = 0;
+      if (pw.length >= 16) score++;
+      if (pw.length >= 24) score++;
+      if (/[a-z]/.test(pw)) score++;
+      if (/[A-Z]/.test(pw)) score++;
+      if (/[0-9]/.test(pw)) score++;
+      if (/[^a-zA-Z0-9]/.test(pw)) score++;
+      const pct = Math.min(100, (score / 6) * 100);
+      const colors = ['#dc2626', '#f59e0b', '#eab308', '#22c55e', '#10b981'];
+      const labels = ['Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
+      const idx = Math.min(Math.floor(pct / 25), 4);
+      $('strength-fill').style.width = pct + '%';
+      $('strength-fill').style.background = colors[idx];
+      $('strength-text').textContent = labels[idx];
+      $('strength-text').style.color = colors[idx];
+    }
+
+    // --- Auto-clear ---
+    function startAutoClear() {
+      stopAutoClear();
+      let seconds = 30;
+      $('auto-clear-timer').textContent = `(clears in ${seconds}s)`;
+      clearTimer = setInterval(() => {
+        seconds--;
+        if (seconds <= 0) { hideResult(); toast('Password cleared for security'); }
+        else $('auto-clear-timer').textContent = `(clears in ${seconds}s)`;
+      }, 1000);
+    }
+    function stopAutoClear() {
+      if (clearTimer) { clearInterval(clearTimer); clearTimer = null; }
+      $('auto-clear-timer').textContent = '';
+    }
+    function hideResult() { stopAutoClear(); $('result').style.display = 'none'; $('output').textContent = ''; }
+    function showResult(password) {
+      $('output').textContent = password;
+      $('result').style.display = 'block';
+      showStrength(password);
+      startAutoClear();
+    }
+
+    // --- Real-time base password validation ---
+    function validateBasePasswords() {
+      const base = $('gen-base').value;
+      const confirm = $('gen-base-confirm').value;
+      const baseHint = $('gen-base-hint');
+      const confirmHint = $('gen-confirm-hint');
+      let valid = true;
+
+      // Base password strength hints
+      if (base.length === 0) {
+        baseHint.textContent = '';
+        baseHint.className = 'field-hint';
+        $('gen-base').classList.remove('valid', 'invalid');
+      } else if (base.length < 8) {
+        baseHint.textContent = 'Too short — use at least 8 characters';
+        baseHint.className = 'field-hint hint-error';
+        $('gen-base').classList.add('invalid');
+        $('gen-base').classList.remove('valid');
+        valid = false;
+      } else {
+        let strength = 0;
+        if (/[a-z]/.test(base)) strength++;
+        if (/[A-Z]/.test(base)) strength++;
+        if (/[0-9]/.test(base)) strength++;
+        if (/[^a-zA-Z0-9]/.test(base)) strength++;
+        if (strength < 2) {
+          baseHint.textContent = 'Weak — mix uppercase, lowercase, numbers, symbols';
+          baseHint.className = 'field-hint hint-error';
+          $('gen-base').classList.add('invalid');
+          $('gen-base').classList.remove('valid');
+        } else if (strength < 4) {
+          baseHint.textContent = 'Decent — could be stronger';
+          baseHint.className = 'field-hint hint-ok';
+          $('gen-base').classList.add('valid');
+          $('gen-base').classList.remove('invalid');
+        } else {
+          baseHint.textContent = 'Strong base password';
+          baseHint.className = 'field-hint hint-ok';
+          $('gen-base').classList.add('valid');
+          $('gen-base').classList.remove('invalid');
+        }
+      }
+
+      // Confirm match
+      if (confirm.length === 0) {
+        confirmHint.textContent = '';
+        confirmHint.className = 'field-hint';
+        $('gen-base-confirm').classList.remove('valid', 'invalid');
+      } else if (base !== confirm) {
+        confirmHint.textContent = 'Passwords do not match';
+        confirmHint.className = 'field-hint hint-error';
+        $('gen-base-confirm').classList.add('invalid');
+        $('gen-base-confirm').classList.remove('valid');
+        valid = false;
+      } else {
+        confirmHint.textContent = 'Passwords match';
+        confirmHint.className = 'field-hint hint-ok';
+        $('gen-base-confirm').classList.add('valid');
+        $('gen-base-confirm').classList.remove('invalid');
+      }
+
+      const hasAppKey = $('gen-appKey').value.trim().length > 0;
+      $('gen-btn').disabled = !(valid && base.length >= 8 && confirm.length > 0 && base === confirm && hasAppKey);
+    }
+
+    $('gen-base').addEventListener('input', validateBasePasswords);
+    $('gen-base-confirm').addEventListener('input', validateBasePasswords);
+    $('gen-appKey').addEventListener('input', validateBasePasswords);
+
+    // --- Lock / Unlock ---
+    async function checkStatus() {
+      const res = await fetch('/api/status');
+      const data = await res.json();
+      if (data.unlocked) { showApp(); } else { showLock(); }
+    }
+
+    function showLock() {
+      $('lock-screen').classList.remove('hidden');
+      $('main-app').classList.add('hidden');
+      $('master-pw').value = '';
+      $('master-pw').focus();
+    }
+
+    function showApp() {
+      $('lock-screen').classList.add('hidden');
+      $('main-app').classList.remove('hidden');
+      loadKeys();
+    }
+
+    $('unlock-btn').addEventListener('click', async () => {
+      const pw = $('master-pw').value;
+      if (!pw) { toast('Enter a master password'); return; }
+
+      // First-time setup: require confirmation
+      if (isFirstTime) {
+        const confirm = $('master-pw-confirm').value;
+        if (pw !== confirm) { toast('Master passwords do not match'); return; }
+      }
+
+      const res = await fetch('/api/unlock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ masterPw: pw }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.error); return; }
+      if (data.firstTime) {
+        isFirstTime = false;
+        toast('Master password set. Welcome!');
+      }
+      showApp();
+    });
+
+    async function detectFirstTime() {
+      const res = await fetch('/api/first-time');
+      const data = await res.json();
+      isFirstTime = data.firstTime;
+      if (isFirstTime) {
+        $('master-confirm-wrap').classList.remove('hidden');
+        $('lock-msg').textContent = 'Set a master password to encrypt your data';
+      } else {
+        $('master-confirm-wrap').classList.add('hidden');
+        $('lock-msg').textContent = 'Enter your master password to unlock';
+      }
+    }
+
+    $('lockBtn').addEventListener('click', async () => {
+      await fetch('/api/lock', { method: 'POST' });
+      hideResult();
+      showLock();
+      toast('Locked');
+    });
+
+    $('master-pw').addEventListener('keydown', e => { if (e.key === 'Enter') $('unlock-btn').click(); });
+    $('master-pw-confirm')?.addEventListener('keydown', e => { if (e.key === 'Enter') $('unlock-btn').click(); });
+
+    // --- Tab switching ---
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const target = tab.dataset.tab;
+        $('generate-panel').classList.toggle('hidden', target !== 'generate');
+        $('retrieve-panel').classList.toggle('hidden', target !== 'retrieve');
+        hideResult();
+        if (target === 'retrieve') loadKeys();
+      });
+      tab.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') tab.click(); });
+    });
+
+    // --- Password visibility toggle ---
+    document.querySelectorAll('.pw-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const input = $(btn.dataset.target);
+        const isPassword = input.type === 'password';
+        input.type = isPassword ? 'text' : 'password';
+        btn.textContent = isPassword ? '🙈' : '👁';
+      });
+    });
+
+    // --- Load keys ---
+    async function loadKeys() {
+      const res = await fetch('/api/keys');
+      if (res.status === 401) { showLock(); return; }
+      const data = await res.json();
+      allKeys = data.keys;
+      filterKeys();
+    }
+
+    function filterKeys() {
+      const search = $('ret-search').value.toLowerCase().trim();
+      const sel = $('ret-appKey');
+      sel.innerHTML = '';
+      const entries = Object.entries(allKeys);
+      const filtered = entries.filter(([key, prefs]) =>
+        key.includes(search) || (prefs.category && prefs.category.toLowerCase().includes(search))
+      );
+      if (filtered.length === 0) {
+        $('no-keys-msg').classList.remove('hidden');
+        $('key-list-wrap').classList.add('hidden');
+        $('key-info').classList.add('hidden');
+      } else {
+        $('no-keys-msg').classList.add('hidden');
+        $('key-list-wrap').classList.remove('hidden');
+        filtered.forEach(([k]) => {
+          const opt = document.createElement('option');
+          opt.value = k; opt.textContent = k;
+          sel.appendChild(opt);
+        });
+        updateKeyInfo();
+      }
+    }
+
+    function updateKeyInfo() {
+      const key = $('ret-appKey').value;
+      const prefs = allKeys[key];
+      if (!prefs) { $('key-info').classList.add('hidden'); return; }
+      $('key-info').classList.remove('hidden');
+      const created = new Date(prefs.created_at).toLocaleDateString();
+      const updated = new Date(prefs.updated_at).toLocaleDateString();
+      const parts = [
+        `Length: ${prefs.length}`, `Symbols: ${prefs.symbols ? 'Yes' : 'No'}`,
+        `v${prefs.version}`, `Created: ${created}`,
+      ];
+      if (prefs.created_at !== prefs.updated_at) parts.push(`Updated: ${updated}`);
+      if (prefs.category) parts.push(`📁 ${prefs.category}`);
+      $('key-info').textContent = parts.join('  •  ');
+    }
+
+    $('ret-search').addEventListener('input', filterKeys);
+    $('ret-appKey').addEventListener('change', updateKeyInfo);
+
+    // --- Generate ---
+    $('gen-btn').addEventListener('click', async () => {
+      const appKey = $('gen-appKey').value.trim();
+      const basePassword = $('gen-base').value;
+      const confirmPassword = $('gen-base-confirm').value;
+      const length = parseInt($('gen-length').value);
+      const symbols = $('gen-symbols').value === 'yes';
+      const category = $('gen-category').value.trim();
+
+      if (!appKey || !basePassword) { toast('App key and base password are required'); return; }
+      if (basePassword !== confirmPassword) { toast('Base passwords do not match'); return; }
+
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ basePassword, appKey, length, symbols, category }),
+      });
+      const data = await res.json();
+
+      if (res.status === 409 && data.duplicate) {
+        // Duplicate key — show regenerate dialog
+        showDuplicateDialog(appKey, data.existing, basePassword);
+        return;
+      }
+      if (!res.ok) { toast(data.error); return; }
+
+      showResult(data.password);
+      toast(`Key "${data.appKey}" onboarded`);
+      $('gen-appKey').value = ''; $('gen-category').value = '';
+      $('gen-base').value = ''; $('gen-base-confirm').value = '';
+      $('gen-base').classList.remove('valid', 'invalid');
+      $('gen-base-confirm').classList.remove('valid', 'invalid');
+      $('gen-base-hint').textContent = ''; $('gen-confirm-hint').textContent = '';
+      $('gen-btn').disabled = true;
+      loadKeys();
+    });
+
+    // --- Duplicate key dialog ---
+    function showDuplicateDialog(appKey, existing, basePassword) {
+      const overlay = document.createElement('div');
+      overlay.className = 'confirm-overlay';
+      overlay.innerHTML = `<div class="confirm-box">
+        <p>Key "<strong>${appKey}</strong>" already exists (v${existing.version}).</p>
+        <p style="font-size:0.85rem;color:#94a3b8">Current: Length ${existing.length}, Symbols: ${existing.symbols ? 'Yes' : 'No'}${existing.category ? ', Category: ' + existing.category : ''}</p>
+        <p style="font-size:0.85rem">Regenerate with new settings?</p>
+        <div class="dup-settings">
+          <label>Length</label>
+          <select id="dup-length">
+            <option value="16" ${existing.length===16?'selected':''}>16</option>
+            <option value="20" ${existing.length===20?'selected':''}>20</option>
+            <option value="24" ${existing.length===24?'selected':''}>24</option>
+            <option value="32" ${existing.length===32?'selected':''}>32</option>
+          </select>
+          <label>Symbols</label>
+          <select id="dup-symbols">
+            <option value="yes" ${existing.symbols?'selected':''}>Yes</option>
+            <option value="no" ${!existing.symbols?'selected':''}>No</option>
+          </select>
+          <label>Category</label>
+          <input type="text" id="dup-category" value="${existing.category || ''}" placeholder="optional">
+        </div>
+        <div class="confirm-actions">
+          <button class="primary btn-warn" id="dup-regen">Regenerate</button>
+          <button class="primary" id="dup-cancel" style="background:#334155">Cancel</button>
+        </div>
+      </div>`;
+      document.body.appendChild(overlay);
+
+      overlay.querySelector('#dup-regen').addEventListener('click', async () => {
+        const length = parseInt(overlay.querySelector('#dup-length').value);
+        const symbols = overlay.querySelector('#dup-symbols').value === 'yes';
+        const category = overlay.querySelector('#dup-category').value.trim();
+        overlay.remove();
+
+        const res = await fetch('/api/regenerate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ basePassword, appKey, length, symbols, category }),
+        });
+        const data = await res.json();
+        if (!res.ok) { toast(data.error); return; }
+        showResult(data.password);
+        toast(`Regenerated "${appKey}" (v${data.version})`);
+        loadKeys();
+      });
+
+      overlay.querySelector('#dup-cancel').addEventListener('click', () => overlay.remove());
+      overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    }
+
+    // --- Retrieve ---
+    $('ret-btn').addEventListener('click', async () => {
+      const appKey = $('ret-appKey').value;
+      const basePassword = $('ret-base').value;
+      if (!appKey || !basePassword) { toast('Select a key and enter base password'); return; }
+      const res = await fetch('/api/retrieve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ basePassword, appKey }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.error); return; }
+      showResult(data.password);
+    });
+
+    // --- Rotate ---
+    $('rotate-btn').addEventListener('click', () => {
+      const appKey = $('ret-appKey').value;
+      if (!appKey) { toast('Select a key first'); return; }
+      showConfirm(`Rotate password for "${appKey}"? This bumps the version and changes the password.`, async () => {
+        const basePassword = $('ret-base').value;
+        if (!basePassword) { toast('Enter base password first'); return; }
+        const res = await fetch(`/api/keys/${encodeURIComponent(appKey)}/rotate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ basePassword }),
+        });
+        const data = await res.json();
+        if (!res.ok) { toast(data.error); return; }
+        showResult(data.password);
+        toast(`Rotated to v${data.version}`);
+        loadKeys();
+      });
+    });
+
+    // --- Delete ---
+    $('delete-btn').addEventListener('click', () => {
+      const appKey = $('ret-appKey').value;
+      if (!appKey) { toast('Select a key first'); return; }
+      showConfirm(`Delete "${appKey}"? This cannot be undone.`, async () => {
+        const res = await fetch(`/api/keys/${encodeURIComponent(appKey)}`, { method: 'DELETE' });
+        if (!res.ok) { toast('Failed to delete'); return; }
+        toast(`Deleted "${appKey}"`);
+        hideResult();
+        loadKeys();
+      });
+    });
+
+    // --- History ---
+    $('history-btn').addEventListener('click', async () => {
+      const appKey = $('ret-appKey').value;
+      if (!appKey) { toast('Select a key first'); return; }
+      const res = await fetch(`/api/keys/${encodeURIComponent(appKey)}/history`);
+      const data = await res.json();
+      const overlay = document.createElement('div');
+      overlay.className = 'confirm-overlay';
+      let historyHtml = '';
+      if (data.history.length === 0) {
+        historyHtml = '<p style="color:#94a3b8;font-size:0.85rem">No history yet.</p>';
+      } else {
+        historyHtml = '<div class="history-list">' + data.history.map(h => `
+          <div class="history-item">
+            <span class="history-action">${h.action}</span>
+            ${h.old_version ? `v${h.old_version} → v${h.new_version}` : `v${h.new_version}`}
+            <br><span class="history-time">${new Date(h.timestamp).toLocaleString()}</span>
+            ${h.details ? `<br><span style="color:#64748b">${h.details}</span>` : ''}
+          </div>
+        `).join('') + '</div>';
+      }
+      overlay.innerHTML = `<div class="confirm-box">
+        <p>History for "${appKey}"</p>
+        ${historyHtml}
+        <button class="primary" style="margin-top:1rem;background:#334155" id="hist-close">Close</button>
+      </div>`;
+      document.body.appendChild(overlay);
+      overlay.querySelector('#hist-close').addEventListener('click', () => overlay.remove());
+      overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    });
+
+    // --- Confirm dialog ---
+    function showConfirm(message, onConfirm) {
+      const overlay = document.createElement('div');
+      overlay.className = 'confirm-overlay';
+      overlay.innerHTML = `<div class="confirm-box">
+        <p>${message}</p>
+        <div class="confirm-actions">
+          <button class="primary btn-danger" id="confirm-yes">Yes</button>
+          <button class="primary" id="confirm-no" style="background:#334155">Cancel</button>
+        </div>
+      </div>`;
+      document.body.appendChild(overlay);
+      overlay.querySelector('#confirm-yes').addEventListener('click', () => { overlay.remove(); onConfirm(); });
+      overlay.querySelector('#confirm-no').addEventListener('click', () => overlay.remove());
+      overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    }
+
+    // --- Copy ---
+    $('copyBtn').addEventListener('click', async () => {
+      await navigator.clipboard.writeText($('output').textContent);
+      const btn = $('copyBtn');
+      btn.textContent = '✅ Copied'; btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = '📋 Copy'; btn.classList.remove('copied'); }, 1500);
+    });
+    $('copyClearBtn').addEventListener('click', async () => {
+      await navigator.clipboard.writeText($('output').textContent);
+      hideResult();
+      toast('Copied & cleared');
+    });
+
+    // --- Export / Import ---
+    $('exportBtn').addEventListener('click', () => { window.location.href = '/api/export'; toast('Keys exported'); });
+    $('importBtn').addEventListener('click', () => $('importFile').click());
+    $('importFile').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const json = JSON.parse(text);
+        const res = await fetch('/api/import', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(json),
+        });
+        const data = await res.json();
+        toast(`Imported ${data.imported} new key(s)`);
+        loadKeys();
+      } catch { toast('Invalid JSON file'); }
+      $('importFile').value = '';
+    });
+
+    // --- Keyboard shortcuts ---
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'g') { e.preventDefault(); document.querySelector('[data-tab="generate"]').click(); $('gen-appKey').focus(); }
+        if (e.key === 'r') { e.preventDefault(); document.querySelector('[data-tab="retrieve"]').click(); }
+        if (e.key === 'e') { e.preventDefault(); $('exportBtn').click(); }
+      }
+    });
+
+    // --- Init ---
+    async function init() {
+      await detectFirstTime();
+      await checkStatus();
+    }
+    init();
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>
